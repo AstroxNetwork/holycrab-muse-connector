@@ -1,0 +1,241 @@
+/**
+ * Custom theme for the Muse Connector Template docs.
+ *
+ * VitePress's default theme is competent but anonymous. This layers a brand,
+ * tighter typography and some depth on top of it without replacing the theme —
+ * every VitePress variable and component keeps working.
+ */
+
+/* ── Brand ─────────────────────────────────────────────────────────── */
+:root {
+  --vp-c-brand-1: #6355f5;
+  --vp-c-brand-2: #5546ea;
+  --vp-c-brand-3: #4a3adb;
+  --vp-c-brand-soft: rgba(99, 85, 245, 0.14);
+
+  --vp-c-tip-1: #6355f5;
+  --vp-c-tip-soft: rgba(99, 85, 245, 0.12);
+
+  /* A slightly cooler neutral ramp than the default. */
+  --vp-c-bg-alt: #fbfbfd;
+
+  --muse-radius: 12px;
+  --muse-radius-sm: 8px;
+  --muse-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 12px rgba(16, 24, 40, 0.05);
+  --muse-shadow-lg: 0 2px 4px rgba(16, 24, 40, 0.05), 0 12px 28px rgba(16, 24, 40, 0.09);
+}
+
+.dark {
+  --vp-c-brand-1: #8b7fff;
+  --vp-c-brand-2: #7a6cfb;
+  --vp-c-brand-3: #6a5bf0;
+  --vp-c-brand-soft: rgba(139, 127, 255, 0.16);
+
+  --vp-c-tip-1: #8b7fff;
+  --vp-c-tip-soft: rgba(139, 127, 255, 0.14);
+
+  --vp-c-bg-alt: #0b0d13;
+
+  --muse-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 0, 0, 0.35);
+  --muse-shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.4), 0 14px 32px rgba(0, 0, 0, 0.45);
+}
+
+/* ── Home hero ─────────────────────────────────────────────────────── */
+.VPHero .name,
+.VPHero .text {
+  letter-spacing: -0.03em;
+}
+
+.VPHero .name .clip {
+  background: linear-gradient(120deg, var(--vp-c-brand-1), #a855f7 55%, #ec4899);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.VPHero .tagline {
+  max-width: 42rem;
+  line-height: 1.6;
+}
+
+/* Soft brand glow behind the hero, so the page opens with some depth. */
+.VPHome {
+  position: relative;
+}
+
+.VPHome::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 420px;
+  pointer-events: none;
+  background: radial-gradient(
+    60% 100% at 50% 0%,
+    var(--vp-c-brand-soft) 0%,
+    transparent 70%
+  );
+  z-index: 0;
+}
+
+.VPHome > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Feature cards ─────────────────────────────────────────────────── */
+.VPFeature {
+  border-radius: var(--muse-radius);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.VPFeature:hover {
+  transform: translateY(-2px);
+  border-color: var(--vp-c-brand-1);
+  box-shadow: var(--muse-shadow-lg);
+}
+
+.VPFeature .title {
+  letter-spacing: -0.01em;
+}
+
+.VPFeature .icon {
+  background: var(--vp-c-brand-soft) !important;
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────── */
+.VPButton.brand {
+  border: none;
+  background: linear-gradient(135deg, var(--vp-c-brand-1), #8b5cf6);
+  box-shadow: var(--muse-shadow);
+}
+
+.VPButton.brand:hover {
+  background: linear-gradient(135deg, var(--vp-c-brand-2), #7c4ef0);
+}
+
+/* ── Content typography ────────────────────────────────────────────── */
+.vp-doc h1 {
+  letter-spacing: -0.025em;
+}
+
+.vp-doc h2 {
+  letter-spacing: -0.02em;
+  padding-top: 1.6rem;
+  margin-top: 2.8rem;
+}
+
+.vp-doc h3 {
+  letter-spacing: -0.01em;
+}
+
+.vp-doc a {
+  text-underline-offset: 3px;
+}
+
+/* ── Code ──────────────────────────────────────────────────────────── */
+.vp-doc div[class*="language-"] {
+  border-radius: var(--muse-radius);
+  box-shadow: var(--muse-shadow);
+}
+
+.vp-doc [class*="language-"] pre {
+  font-size: 0.86rem;
+  line-height: 1.65;
+}
+
+.vp-doc :not(pre) > code {
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
+  font-weight: 500;
+  border-radius: 5px;
+  padding: 0.14em 0.38em;
+}
+
+/* VitePress dims fenced code blocks; the copy button is the affordance. */
+.vp-doc [class*="language-"] > button.copy {
+  border-radius: 6px;
+}
+
+/* ── Tables ────────────────────────────────────────────────────────── */
+.vp-doc table {
+  display: table;
+  width: 100%;
+  border-radius: var(--muse-radius);
+  overflow: hidden;
+  border: 1px solid var(--vp-c-divider);
+}
+
+.vp-doc tr:nth-child(2n) {
+  background: var(--vp-c-bg-alt);
+}
+
+.vp-doc th {
+  background: var(--vp-c-bg-soft);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.vp-doc th,
+.vp-doc td {
+  border: none;
+  border-bottom: 1px solid var(--vp-c-divider);
+}
+
+.vp-doc tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── Callouts ──────────────────────────────────────────────────────── */
+.vp-doc .custom-block {
+  border-radius: var(--muse-radius);
+  border-width: 1px;
+  box-shadow: var(--muse-shadow);
+}
+
+.vp-doc .custom-block.danger {
+  border-color: rgba(229, 72, 77, 0.35);
+}
+
+/* ── Sidebar and nav polish ────────────────────────────────────────── */
+.VPSidebarItem.level-0 > .item > .text {
+  font-weight: 650;
+  letter-spacing: -0.005em;
+}
+
+.VPSidebarItem.is-active > .item .link > .text {
+  font-weight: 600;
+}
+
+.VPNavBarTitle .title {
+  letter-spacing: -0.015em;
+  font-weight: 650;
+}
+
+.VPNavBar:not(.home) {
+  backdrop-filter: saturate(180%) blur(12px);
+}
+
+/* ── Footer ────────────────────────────────────────────────────────── */
+.VPDocFooter {
+  margin-top: 3rem;
+}
+
+/* ── Scrollbars (desktop only, and only where it helps) ────────────── */
+@media (min-width: 960px) {
+  .VPSidebar::-webkit-scrollbar,
+  .vp-doc div[class*="language-"] pre::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .VPSidebar::-webkit-scrollbar-thumb,
+  .vp-doc div[class*="language-"] pre::-webkit-scrollbar-thumb {
+    background: var(--vp-c-divider);
+    border-radius: 4px;
+  }
+
+  .VPSidebar::-webkit-scrollbar-thumb:hover,
+  .vp-doc div[class*="language-"] pre::-webkit-scrollbar-thumb:hover {
+    background: var(--vp-c-text-3);
+  }
+}

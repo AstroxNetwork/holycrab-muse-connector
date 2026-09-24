@@ -1,7 +1,7 @@
 {
   "name": "muse-connector-template",
   "version": "0.1.0",
-  "description": "Deployable connector template for Meta Muse — per-connection tokens, async job scaffolding, one registry generating routes, OpenAPI and llms.txt.",
+  "description": "Deployable connector template for Meta Muse \u2014 per-connection tokens, async job scaffolding, one registry generating routes, OpenAPI and llms.txt.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "dist/index.js",
@@ -27,7 +27,10 @@
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.check.json",
     "deploy:cf": "wrangler deploy",
-    "deploy:vercel": "vercel deploy --prod"
+    "deploy:vercel": "vercel deploy --prod",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
@@ -38,6 +41,7 @@
     "@types/node": "^22.10.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
+    "vitepress": "^1.6.4",
     "vitest": "^3.0.5",
     "wrangler": "^4.137.0"
   },

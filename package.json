@@ -1,0 +1,56 @@
+{
+  "name": "@holycrab/muse-connector",
+  "version": "0.1.0",
+  "description": "HolyCrab connector for Meta Muse — a per-user REST surface Muse drives as a Custom Connector.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "holycrab-muse-connector": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "connector"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.check.json",
+    "deploy:cf": "wrangler deploy",
+    "deploy:vercel": "vercel deploy --prod"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "hono": "^4.6.14",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.5",
+    "wrangler": "^4.137.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AstroxNetwork/holycrab-muse-connector.git"
+  },
+  "homepage": "https://holycrab.ai",
+  "keywords": [
+    "holycrab",
+    "muse",
+    "meta",
+    "connector",
+    "mcp",
+    "astroxnetwork"
+  ]
+}

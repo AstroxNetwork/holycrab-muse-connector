@@ -1,0 +1,10 @@
+node_modules
+dist
+.git
+.github
+.vercel
+.wrangler
+*.md
+!README.md
+.env
+.env.*

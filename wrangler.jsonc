@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "holycrab-muse-connector",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "vars": {
+    "PUBLIC_URL": "https://muse.holycrab.ai",
+    "DASHBOARD_URL": "https://holycrab.ai"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "MUSE_KV",
+      "id": "REPLACE_WITH_KV_NAMESPACE_ID"
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "muse.holycrab.ai",
+      "custom_domain": true
+    }
+  ]
+}

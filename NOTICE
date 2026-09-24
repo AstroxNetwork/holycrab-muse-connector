@@ -1,0 +1,15 @@
+HolyCrab Muse Connector
+Copyright 2026 AstroxNetwork
+
+This product includes software developed at 1Claw AI (https://1claw.co),
+specifically the muse-connector project, which is licensed under the
+Apache License, Version 2.0.
+
+The following files are derived from that work:
+
+  src/tokens.ts     — per-connection HMAC connector tokens
+  src/ratelimit.ts  — in-process token-bucket limiter
+  src/app.ts        — HTTP surface shape, response hygiene, error mapping
+  src/openapi.ts    — OpenAPI / llms.txt approach
+
+They have been modified for this project.

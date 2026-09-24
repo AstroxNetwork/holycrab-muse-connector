@@ -47,6 +47,16 @@ export default {
     const provider = createPlaceholderProvider();
     // ─────────────────────────────────────────────────────────────────
 
+    if (!env.MUSE_KV) {
+      // Loud on purpose. The failure mode is silent and confusing: people
+      // get logged out at random as requests land on fresh isolates, and a
+      // "disconnect" that only reaches one isolate stops meaning anything.
+      console.warn(
+        "[muse-connector] MUSE_KV is not bound — connections are per-isolate " +
+          "and revocation is not durable. Bind a KV namespace before real use.",
+      );
+    }
+
     const app = createApp(
       {
         connectorSecret: env.CONNECTOR_SECRET,

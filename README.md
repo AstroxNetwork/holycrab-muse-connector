@@ -1,11 +1,23 @@
 # HolyCrab Muse Connector
 
+**English** · [简体中文](README.zh-CN.md)
+
 A deployable [Meta Muse](https://muse.ai) connector template.
 
 Muse is Meta's personal AI agent. It reaches into third-party services through
-**connectors**. To build one you don't register an app or get an app id — you
+**connectors**. Building one needs no app registration and no app id — you
 expose an HTTP API that Muse can read about and call. This repo is that API,
-with the parts that are easy to get wrong already done:
+with the parts that are easy to get wrong already done.
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FAstroxNetwork%2Fholycrab-muse-connector&env=CONNECTOR_SECRET&envDescription=At%20least%2032%20random%20characters.%20Signs%20the%20tokens%20users%20paste%20into%20Muse.&project-name=holycrab-muse-connector&repository-name=holycrab-muse-connector)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/AstroxNetwork/holycrab-muse-connector)
+
+> **Both buttons deploy a working skeleton, not a finished connector.** The
+> operations are placeholders. What you get is the auth model, the async-job
+> plumbing, the OpenAPI/llms.txt generation and the deploy wiring — so that
+> adding a real capability is a small, local change.
+
+What's already handled:
 
 - **Per-connection tokens** — users never hand Muse your real API key.
 - **Async job scaffolding** — the poll-don't-resubmit pattern, wired into both
@@ -14,12 +26,11 @@ with the parts that are easy to get wrong already done:
   person before spending their money.
 - **One registry** — routes, `/openapi.json` and `/llms.txt` are all generated
   from a single list of operations, so they can't drift apart.
-- **Three deploy targets** — Vercel, Cloudflare Workers, or Docker, from the
-  same source.
+- **Three deploy targets** — Vercel, Cloudflare Workers, or Docker.
 
 ```
-Muse ──(hcm_ token)──▶ muse.holycrab.ai ──(provider credential)──▶ your API
-        scoped, revocable      this connector          held server-side
+Muse ──(hcm_ token)──▶ muse.example.com ──(provider credential)──▶ your API
+        scoped, revocable     this connector         held server-side
 ```
 
 ---
@@ -34,7 +45,7 @@ export $(grep -v '^#' .env | xargs)
 npm run dev
 ```
 
-Then look at what Muse will see:
+See what Muse will see:
 
 ```bash
 curl -s localhost:8787/openapi.json | jq '.paths | keys'
@@ -52,13 +63,34 @@ TOKEN=$(curl -s -X POST localhost:8787/v1/link \
 curl -s localhost:8787/v1/me -H "Authorization: Bearer $TOKEN" | jq
 ```
 
+Run the tests — they double as the specification:
+
+```bash
+npm test        # 36 tests
+npm run typecheck
+```
+
 ---
 
 ## Deploy
 
-All three targets run the same code. Pick one.
+### One-click
 
-### Vercel
+Use the buttons above, or:
+
+| Target | Link |
+|---|---|
+| Vercel | [vercel.com/new/clone](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FAstroxNetwork%2Fholycrab-muse-connector&env=CONNECTOR_SECRET&envDescription=At%20least%2032%20random%20characters.%20Signs%20the%20tokens%20users%20paste%20into%20Muse.&project-name=holycrab-muse-connector&repository-name=holycrab-muse-connector) |
+| Cloudflare Workers | [deploy.workers.cloudflare.com](https://deploy.workers.cloudflare.com/?url=https://github.com/AstroxNetwork/holycrab-muse-connector) |
+
+Both ask for `CONNECTOR_SECRET` (32+ random characters). Add the rest
+afterwards:
+
+- `PUBLIC_URL` — the URL Muse will call, e.g. `https://muse.example.com`
+- `DASHBOARD_URL` — where users go to revoke access
+- `LINK_SECRET` — guards `POST /v1/link`
+
+### Vercel (CLI)
 
 ```bash
 npm i -g vercel
@@ -69,22 +101,22 @@ vercel env add KV_REST_API_TOKEN
 vercel deploy --prod
 ```
 
-`vercel.json` rewrites every path to `api/index.ts` so the public URLs stay at
-the root — Muse must see `https://muse.holycrab.ai/openapi.json`, not
+`vercel.json` rewrites every path to `api/index.ts` so public URLs stay at the
+root — Muse must see `https://muse.example.com/openapi.json`, not
 `/api/openapi.json`.
 
-### Cloudflare Workers
+### Cloudflare Workers (CLI)
 
 ```bash
 npm i -g wrangler
-wrangler kv namespace create MUSE_KV   # paste the id into wrangler.jsonc
+wrangler kv namespace create MUSE_KV   # then uncomment kv_namespaces in wrangler.jsonc
 wrangler secret put CONNECTOR_SECRET
 npm run deploy:cf
 ```
 
-`wrangler.jsonc` already sets `nodejs_compat` (needed for `node:crypto` HMAC)
-and claims the `muse.holycrab.ai` custom domain. Remove the `routes` block if
-you'd rather use `*.workers.dev` first.
+`wrangler.jsonc` ships minimal on purpose — no hardcoded resource ids and no
+custom domain — so the one-click button works for anyone. It sets
+`nodejs_compat`, which is required because `tokens.ts` uses `node:crypto`.
 
 ### Docker
 
@@ -92,15 +124,25 @@ you'd rather use `*.workers.dev` first.
 docker build -t muse-connector .
 docker run -p 8787:8787 \
   -e CONNECTOR_SECRET=... \
-  -e PUBLIC_URL=https://muse.holycrab.ai \
+  -e PUBLIC_URL=https://muse.example.com \
   muse-connector
 ```
+
+### ⚠️ Add a real store before real users
+
+Without KV the connector keeps connections **in memory**. Locally that's fine.
+On serverless it is not: each request may land in a fresh isolate, so people get
+logged out at random and — worse — a revocation only reaches one isolate. The
+Worker logs a warning when the binding is missing.
+
+Set `KV_REST_API_URL` / `KV_REST_API_TOKEN` (Vercel KV or Upstash), or bind
+`MUSE_KV` (Cloudflare KV), and it switches automatically.
 
 ---
 
 ## Make it yours
 
-There are exactly three things to change. Everything else is plumbing.
+Three things to change. Everything else is plumbing.
 
 ### 1. The capabilities — `src/operations.registry.ts`
 
@@ -122,22 +164,17 @@ This is the file you edit. Delete the three `demo*` operations and add one
 }
 ```
 
-That single entry produces the route, the OpenAPI path, the `/llms.txt` line,
-and the "do not resubmit" warning — because `spends` and `async` are declared
-once.
+That one entry produces the route, the OpenAPI path, the `/llms.txt` line and
+the "do not resubmit" warning — because `spends` and `async` are declared once.
 
 ### 2. The service — `src/providers/`
 
-Implement `ProviderPort` against your real API. `providers/placeholder.ts`
-shows the shape and is what you delete.
+Implement `ProviderPort` against your real API.
+`providers/placeholder.ts` shows the shape and is what you delete.
 
-### 3. Persistence — already handled
+### 3. Persistence
 
-`createMemoryConnectionStore()` is for local dev only. In production, set the
-KV credentials and the connector uses `store.kv.ts` (Cloudflare KV) or
-`store.upstash.ts` (Vercel KV / Upstash) automatically. **Without a real store,
-serverless deploys silently drop connections and revocation stops being
-durable.**
+Already handled — see the warning above.
 
 ---
 
@@ -152,7 +189,7 @@ progress", the person is charged twice. So:
 
 - mark the create operation `async` and point `pollWith` at the read operation
 - mark it `spends` so the description says so outright
-- honour `Idempotency-Key` (the skeleton does)
+- honour `Idempotency-Key` (the skeleton does — there's a test for it)
 
 `/llms.txt` states this in as many words, and the OpenAPI carries
 `x-long-running`, `x-poll-operationId` and `x-requires-confirmation`.
@@ -164,24 +201,11 @@ is weaker than "Read-only. This cannot move funds." State the limit.
 
 ---
 
-## Verify before you point Muse at it
-
-```bash
-npm test          # 36 tests: tokens, stores, routes, async flow, auth
-npm run typecheck
-```
-
-The test suite is the specification. If you add a capability, add a test that
-proves a retry doesn't double-charge.
-
----
-
 ## Submitting to the Muse directory
 
 Being reachable as a **Custom Connector** requires nothing from Meta — a user
-can point Muse at your URL today. Getting listed in the Muse connector
-**directory** is a separate process with review; see
-[`connector/SUBMISSION.md`](connector/SUBMISSION.md) for the kit.
+can point Muse at your URL today. Getting listed in the **directory** is a
+separate process with review; see [`connector/SUBMISSION.md`](connector/SUBMISSION.md).
 
 Two things to know going in:
 
@@ -218,5 +242,5 @@ Errors are RFC 9457 `problem+json`.
 
 ## License
 
-Apache-2.0. Portions derived from 1Claw AI's muse-connector — see
-[`NOTICE`](NOTICE).
+Apache-2.0. Portions derived from [1Claw AI's muse-connector](https://github.com/1clawAI/muse-connector) —
+see [`NOTICE`](NOTICE).

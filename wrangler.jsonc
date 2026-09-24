@@ -1,24 +1,34 @@
 {
+  // Cloudflare Workers config.
+  //
+  // Deliberately minimal so "Deploy to Cloudflare" works for anyone who
+  // clones this repo: no hardcoded resource ids, no custom domain.
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "holycrab-muse-connector",
   "main": "src/worker.ts",
   "compatibility_date": "2026-09-01",
+  // tokens.ts uses node:crypto for HMAC. Without this flag the Worker will
+  // fail to bundle.
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
   "vars": {
     "PUBLIC_URL": "https://muse.holycrab.ai",
     "DASHBOARD_URL": "https://holycrab.ai"
-  },
-  "kv_namespaces": [
-    {
-      "binding": "MUSE_KV",
-      "id": "REPLACE_WITH_KV_NAMESPACE_ID"
-    }
-  ],
-  "routes": [
-    {
-      "pattern": "muse.holycrab.ai",
-      "custom_domain": true
-    }
-  ]
+  }
+
+  // ── Persistence ────────────────────────────────────────────────────
+  // Without KV the Worker keeps connections in memory. That works for a
+  // first deploy and for a single-user test, but every isolate has its own
+  // memory, so on a real deployment people get logged out at random and
+  // revocation stops being durable.
+  //
+  // Create one, then uncomment:
+  //   npx wrangler kv namespace create MUSE_KV
+  //
+  // "kv_namespaces": [{ "binding": "MUSE_KV", "id": "<namespace-id>" }]
+
+  // ── Custom domain ──────────────────────────────────────────────────
+  // Uncomment once the Worker is deployed and you control the domain.
+  //
+  // "routes": [{ "pattern": "muse.example.com", "custom_domain": true }]
 }

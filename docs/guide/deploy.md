@@ -1,32 +1,91 @@
 # Deploy
 
-Same source, three targets. There is no platform-specific code in the core —
-each target is a thin entry point that wires the same app.
+Three targets, one codebase. The core is a plain Hono app; each target is a thin
+adapter around it, so nothing you write in `src/operations.registry.ts` or
+`src/providers/` is platform-specific.
+
+## Which one?
+
+| | Vercel | Cloudflare Workers |
+|---|---|---|
+| Runtime | Node.js serverless function | V8 isolate |
+| Entry point | `api/index.ts` (`hono/vercel`) | `src/worker.ts` (default export) |
+| Routing | needs `vercel.json` to rewrite every path to `/api` | Worker owns every path natively |
+| Cold start | Node function start | effectively none |
+| `node:crypto` | native | **requires `nodejs_compat`** |
+| Storage round trip | KV over REST — an extra network hop | KV binding, in-process |
+| Config lives in | dashboard, or `vercel env` | `wrangler.jsonc` + `wrangler secret` |
+| Local dev | `vercel dev` | `wrangler dev` |
+| Custom domain | Vercel dashboard | `routes` in `wrangler.jsonc`, or dashboard |
+
+**Pick Cloudflare if** you want the lowest latency, you already run your DNS
+there, or you expect enough volume that per-request cost matters. The native KV
+binding also saves a network hop on every authenticated request — which is every
+request.
+
+**Pick Vercel if** you want full Node compatibility, you are already on Vercel,
+or you would rather debug a Node function than a Worker. Workers run a subset of
+Node behind `nodejs_compat`; Vercel runs actual Node.
+
+**Neither is a lock-in.** Both entry points are under 60 lines and only exist to
+call `createApp()`. Moving between them is an afternoon.
+
+## What's shared
+
+```text
+src/app.ts                 the HTTP surface          ─┐
+src/operations.registry.ts your capabilities          ├─ identical everywhere
+src/providers/             your service               ─┘
+────────────────────────────────────────────────────────
+api/index.ts               Vercel adapter
+src/worker.ts              Cloudflare adapter
+src/index.ts               Node / Docker adapter
+```
 
 ## Vercel
+
+### One-click
+
+Use the **Deploy with Vercel** button on the [home page](/). It prompts for the
+three required variables during setup.
+
+### CLI
 
 ```bash
 npm i -g vercel
 vercel link
-vercel env add CONNECTOR_SECRET
-vercel env add PUBLIC_URL        # https://muse.your-domain.com
-vercel env add DASHBOARD_URL     # https://your-domain.com
-vercel env add KV_REST_API_URL   # Vercel KV or Upstash
+vercel env add CONNECTOR_SECRET      # openssl rand -base64 48
+vercel env add PUBLIC_URL            # https://muse.your-domain.com
+vercel env add DASHBOARD_URL         # https://your-domain.com
+vercel env add KV_REST_API_URL       # Vercel KV or Upstash
 vercel env add KV_REST_API_TOKEN
 vercel deploy --prod
 ```
 
 `vercel.json` rewrites every path to `api/index.ts` so your public URLs stay at
 the root. Muse must see `https://muse.your-domain.com/openapi.json`, not
-`/api/openapi.json`.
+`/api/openapi.json`. If you change the base path, check this first — a rewrite
+that misses `/openapi.json` makes the connector invisible to Muse.
 
-::: tip One-click
-There is a **Deploy with Vercel** button in the
-[README](https://github.com/AstroxNetwork/muse-connector-template#readme). It
-prompts for the three required variables during setup.
-:::
+### Storage on Vercel
+
+Vercel KV is Upstash underneath, so either works. The connector reads whichever
+pair you provide:
+
+- `KV_REST_API_URL` + `KV_REST_API_TOKEN` (Vercel KV)
+- `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` (Upstash directly)
+
+The adapter speaks the REST protocol over `fetch`, so there is no SDK to install.
 
 ## Cloudflare Workers
+
+### One-click
+
+Use the **Deploy to Cloudflare** button on the [home page](/). It clones the repo
+and deploys it; you supply `CONNECTOR_SECRET` and set the two URLs in
+`wrangler.jsonc` (or as secrets).
+
+### CLI
 
 ```bash
 npm i -g wrangler
@@ -35,12 +94,24 @@ wrangler secret put CONNECTOR_SECRET
 npm run deploy:cf
 ```
 
-`wrangler.jsonc` sets `nodejs_compat`, which is **required** — token signing
-uses `node:crypto`. Without the flag the Worker will not bundle.
+### Things that bite on Workers
 
-The shipped config is deliberately minimal: no hardcoded resource ids and no
-custom domain, so the one-click button works for anyone. Uncomment the `routes`
-block once you control the domain.
+**`nodejs_compat` is required.** Token signing uses `node:crypto` for HMAC. The
+flag is already set in `wrangler.jsonc`; without it the Worker will not bundle.
+
+**`vars` in `wrangler.jsonc` are committed to the repo.** `PUBLIC_URL` and
+`DASHBOARD_URL` live there because they are not secrets. `CONNECTOR_SECRET` is —
+put it in `wrangler secret`, never in the file. Every fork that ships a real
+secret in `vars` has published it.
+
+**Add KV, or revocation stops working.** Without the binding the Worker keeps
+connections in memory, and every isolate has its own. It logs a warning when the
+binding is missing.
+
+### Storage on Cloudflare
+
+Bind a KV namespace as `MUSE_KV`. It is native — no REST hop, which makes every
+authenticated request cheaper than the Vercel equivalent.
 
 ## Docker or any host
 
@@ -61,14 +132,14 @@ The image runs unprivileged and has a healthcheck against `/health`.
 Locally that is fine. On serverless it is not: each request may land in a fresh
 isolate, so users get logged out at random. Worse — a **revocation** only
 reaches one isolate, which means disconnecting does not reliably disconnect.
-The service logs a warning when the binding is missing, on purpose.
 :::
 
-| Store | How to enable |
-|---|---|
-| Cloudflare KV | bind `MUSE_KV` in `wrangler.jsonc` |
-| Vercel KV / Upstash | set `KV_REST_API_URL` and `KV_REST_API_TOKEN` |
-| Anything else | implement the four-method `ConnectionStore` interface |
+| Target | Store | How |
+|---|---|---|
+| Cloudflare | KV binding | bind `MUSE_KV` in `wrangler.jsonc` |
+| Vercel | KV over REST | set `KV_REST_API_URL` + `KV_REST_API_TOKEN` |
+| Docker | KV over REST | same variables |
+| Any | your own | implement the four-method `ConnectionStore` |
 
 Switching is automatic: if KV is configured, it is used.
 
@@ -86,7 +157,7 @@ That is the whole interface. Postgres, DynamoDB, a file — your call.
 ## Do I need a subdomain? {#subdomain}
 
 **No.** Any public HTTPS URL works: a subdomain, a path on your main domain, or
-a `*.workers.dev` URL while testing.
+a `*.workers.dev` / `*.vercel.app` URL while testing.
 
 A subdomain is still a good habit, for two concrete reasons:
 

@@ -1,12 +1,12 @@
 {
-  "name": "@holycrab/muse-connector",
+  "name": "muse-connector-template",
   "version": "0.1.0",
-  "description": "HolyCrab connector for Meta Muse — a per-user REST surface Muse drives as a Custom Connector.",
+  "description": "Deployable connector template for Meta Muse — per-connection tokens, async job scaffolding, one registry generating routes, OpenAPI and llms.txt.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "holycrab-muse-connector": "dist/index.js"
+    "muse-connector": "dist/index.js"
   },
   "files": [
     "dist",
@@ -43,15 +43,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/AstroxNetwork/holycrab-muse-connector.git"
+    "url": "https://github.com/AstroxNetwork/muse-connector-template.git"
   },
-  "homepage": "https://holycrab.ai",
+  "homepage": "https://github.com/AstroxNetwork/muse-connector-template",
   "keywords": [
-    "holycrab",
     "muse",
     "meta",
     "connector",
-    "mcp",
+    "agent",
+    "openapi",
+    "template",
     "astroxnetwork"
   ]
 }

@@ -14,14 +14,14 @@ function makeApp(opts?: { readyAfterMs?: number; linkSecret?: string }) {
   const app = createApp(
     {
       connectorSecret: SECRET,
-      publicUrl: "https://muse.holycrab.ai",
-      dashboardUrl: "https://holycrab.ai",
+      publicUrl: "https://muse.example.com",
+      dashboardUrl: "https://example.com",
       linkSecret: opts?.linkSecret ?? LINK_SECRET,
       meta: {
         title: "HolyCrab for Muse",
         version: "0.1.0",
         serviceName: "HolyCrab",
-        dashboardUrl: "https://holycrab.ai",
+        dashboardUrl: "https://example.com",
         description: "Test description.",
       },
       // Generous limits so the tests exercise behaviour, not throttling.
@@ -64,7 +64,7 @@ describe("discovery endpoints", () => {
       paths: Record<string, Record<string, Record<string, unknown>>>;
     };
     expect(doc.openapi).toBe("3.1.0");
-    expect(doc.servers[0]!.url).toBe("https://muse.holycrab.ai");
+    expect(doc.servers[0]!.url).toBe("https://muse.example.com");
     // Every registry operation must appear, or Muse cannot learn it.
     for (const path of ["/v1/me", "/v1/things", "/v1/jobs", "/v1/jobs/{id}"]) {
       expect(Object.keys(doc.paths)).toContain(path);

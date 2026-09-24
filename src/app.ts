@@ -129,8 +129,11 @@ export function createApp(cfg: AppConfig, deps: Deps): Hono<Env> {
   });
 
   // ── Discovery (public) ─────────────────────────────────────────────
-  app.get("/health", (c) => c.json({ ok: true, service: "holycrab-muse-connector" }));
-  app.get("/healthz", (c) => c.json({ ok: true, service: "holycrab-muse-connector" }));
+  // The service name comes from config, not a literal: this file is shared
+  // by every deployment of the template.
+  const serviceId = `${cfg.meta.serviceName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-muse-connector`;
+  app.get("/health", (c) => c.json({ ok: true, service: serviceId }));
+  app.get("/healthz", (c) => c.json({ ok: true, service: serviceId }));
   app.get("/openapi.json", (c) =>
     c.json(openapiDocument(cfg.publicUrl, registry, cfg.meta)),
   );

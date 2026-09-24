@@ -3,7 +3,7 @@
  *
  * It exists so the connector boots, serves /openapi.json and /llms.txt, and
  * can be pointed at by Muse while the real service is still being decided.
- * Replace with `holycrab.ts` when the API surface is pinned down:
+ * Replace with a provider for your own API when the surface is pinned down:
  *
  *   1. Fill in `providerCredential` handling (a per-connection upstream key).
  *   2. Implement the real methods on ProviderPort.

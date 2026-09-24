@@ -1,21 +1,43 @@
-# HolyCrab Muse Connector
+# Muse Connector Template
 
 **English** · [简体中文](README.zh-CN.md)
 
-A deployable [Meta Muse](https://muse.ai) connector template.
+A deployable connector template for [Meta Muse](https://muse.ai). Fork it, rename
+it, point it at your own service. Apache-2.0, no strings.
 
-Muse is Meta's personal AI agent. It reaches into third-party services through
+Muse is Meta's personal AI agent. It reaches third-party services through
 **connectors**. Building one needs no app registration and no app id — you
-expose an HTTP API that Muse can read about and call. This repo is that API,
-with the parts that are easy to get wrong already done.
+expose an HTTP API that Muse can read about and call. This is that API, with the
+parts that are easy to get wrong already done.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FAstroxNetwork%2Fholycrab-muse-connector&env=CONNECTOR_SECRET&envDescription=At%20least%2032%20random%20characters.%20Signs%20the%20tokens%20users%20paste%20into%20Muse.&project-name=holycrab-muse-connector&repository-name=holycrab-muse-connector)
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/AstroxNetwork/holycrab-muse-connector)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FAstroxNetwork%2Fmuse-connector-template&env=CONNECTOR_SECRET&envDescription=At%20least%2032%20random%20characters.%20Signs%20the%20tokens%20users%20paste%20into%20Muse.&env=PUBLIC_URL&envDescription=The%20https%20URL%20you%20are%20deploying%20to.%20Muse%20is%20told%20to%20call%20this.&env=DASHBOARD_URL&envDescription=Where%20your%20users%20review%20or%20revoke%20access.&project-name=muse-connector&repository-name=muse-connector)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/AstroxNetwork/muse-connector-template)
 
-> **Both buttons deploy a working skeleton, not a finished connector.** The
-> operations are placeholders. What you get is the auth model, the async-job
-> plumbing, the OpenAPI/llms.txt generation and the deploy wiring — so that
-> adding a real capability is a small, local change.
+> **This deploys a working skeleton, not a finished connector.** The operations
+> are placeholders. What you get is the auth model, the async-job plumbing, the
+> OpenAPI/llms.txt generation and the deploy wiring — so adding a real
+> capability becomes a small, local change.
+
+---
+
+## Not locked in
+
+Worth stating plainly, because connector platforms usually are:
+
+- **Deploy anywhere.** Vercel, Cloudflare Workers, Docker, a VPS, Fly, Railway.
+  Same source, three adapters, no platform-specific code in the core.
+- **Storage is a port, not a vendor.** In-memory, Cloudflare KV, or any
+  Upstash-compatible REST endpoint. Implement the four-method `ConnectionStore`
+  interface and use Postgres, DynamoDB, or a file if you prefer.
+- **No account with us, no API key from us, no service to sign up for.**
+  `CONNECTOR_SECRET` is a string you generate. There is nothing to call home and
+  no telemetry.
+- **The output is a plain OpenAPI service.** Muse reads it, but so can anything
+  else that speaks OpenAPI — ChatGPT, Claude, Cursor, your own agent. Nothing
+  here is Muse-specific except the prose conventions in `llms.txt`, and you can
+  change those.
+- **Fork freely.** Apache-2.0. Rename the package, delete the branding, keep the
+  `NOTICE` file. No attribution required on your deployed service.
 
 What's already handled:
 
@@ -26,11 +48,12 @@ What's already handled:
   person before spending their money.
 - **One registry** — routes, `/openapi.json` and `/llms.txt` are all generated
   from a single list of operations, so they can't drift apart.
-- **Three deploy targets** — Vercel, Cloudflare Workers, or Docker.
+- **Strict config** — `PUBLIC_URL` and `DASHBOARD_URL` are required, because
+  they decide where Muse is told to call and where your users are sent to revoke.
 
 ```
-Muse ──(hcm_ token)──▶ muse.example.com ──(provider credential)──▶ your API
-        scoped, revocable     this connector         held server-side
+Muse ──(hcm_ token)──▶ muse.example.com ──(your credential)──▶ your API
+        scoped, revocable    this connector        held server-side
 ```
 
 ---
@@ -40,7 +63,7 @@ Muse ──(hcm_ token)──▶ muse.example.com ──(provider credential)─
 ```bash
 npm install
 cp .env.example .env
-# put a 32+ char random string in CONNECTOR_SECRET
+# set CONNECTOR_SECRET (openssl rand -base64 48), PUBLIC_URL and DASHBOARD_URL
 export $(grep -v '^#' .env | xargs)
 npm run dev
 ```
@@ -66,7 +89,7 @@ curl -s localhost:8787/v1/me -H "Authorization: Bearer $TOKEN" | jq
 Run the tests — they double as the specification:
 
 ```bash
-npm test        # 36 tests
+npm test        # 50 tests
 npm run typecheck
 ```
 
@@ -76,26 +99,17 @@ npm run typecheck
 
 ### One-click
 
-Use the buttons above, or:
-
-| Target | Link |
-|---|---|
-| Vercel | [vercel.com/new/clone](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FAstroxNetwork%2Fholycrab-muse-connector&env=CONNECTOR_SECRET&envDescription=At%20least%2032%20random%20characters.%20Signs%20the%20tokens%20users%20paste%20into%20Muse.&project-name=holycrab-muse-connector&repository-name=holycrab-muse-connector) |
-| Cloudflare Workers | [deploy.workers.cloudflare.com](https://deploy.workers.cloudflare.com/?url=https://github.com/AstroxNetwork/holycrab-muse-connector) |
-
-Both ask for `CONNECTOR_SECRET` (32+ random characters). Add the rest
-afterwards:
-
-- `PUBLIC_URL` — the URL Muse will call, e.g. `https://muse.example.com`
-- `DASHBOARD_URL` — where users go to revoke access
-- `LINK_SECRET` — guards `POST /v1/link`
+Use the buttons above. Both ask for `CONNECTOR_SECRET`, `PUBLIC_URL` and
+`DASHBOARD_URL`.
 
 ### Vercel (CLI)
 
 ```bash
 npm i -g vercel
 vercel link
-vercel env add CONNECTOR_SECRET      # ≥32 chars
+vercel env add CONNECTOR_SECRET      # openssl rand -base64 48
+vercel env add PUBLIC_URL            # https://muse.example.com
+vercel env add DASHBOARD_URL         # https://example.com
 vercel env add KV_REST_API_URL       # from Vercel KV (or Upstash)
 vercel env add KV_REST_API_TOKEN
 vercel deploy --prod
@@ -116,7 +130,7 @@ npm run deploy:cf
 
 `wrangler.jsonc` ships minimal on purpose — no hardcoded resource ids and no
 custom domain — so the one-click button works for anyone. It sets
-`nodejs_compat`, which is required because `tokens.ts` uses `node:crypto`.
+`nodejs_compat`, required because `tokens.ts` uses `node:crypto`.
 
 ### Docker
 
@@ -125,6 +139,7 @@ docker build -t muse-connector .
 docker run -p 8787:8787 \
   -e CONNECTOR_SECRET=... \
   -e PUBLIC_URL=https://muse.example.com \
+  -e DASHBOARD_URL=https://example.com \
   muse-connector
 ```
 
@@ -172,9 +187,10 @@ the "do not resubmit" warning — because `spends` and `async` are declared once
 Implement `ProviderPort` against your real API.
 `providers/placeholder.ts` shows the shape and is what you delete.
 
-### 3. Persistence
+### 3. Naming
 
-Already handled — see the warning above.
+`SERVICE_NAME` drives the OpenAPI title, `/health` and `llms.txt`. The package
+name and repo name are yours to change.
 
 ---
 
@@ -234,11 +250,16 @@ Errors are RFC 9457 `problem+json`.
 | Variable | Required | Notes |
 |---|---|---|
 | `CONNECTOR_SECRET` | yes | ≥32 chars. Rotating it invalidates all tokens. |
-| `PUBLIC_URL` | recommended | goes in the OpenAPI `servers` entry |
-| `DASHBOARD_URL` | recommended | where users revoke access |
+| `PUBLIC_URL` | yes | the URL Muse calls; goes in the OpenAPI `servers` entry |
+| `DASHBOARD_URL` | yes | where users revoke access |
+| `SERVICE_NAME` | no | default `Muse Connector` |
 | `LINK_SECRET` | production | guards `POST /v1/link` |
 | `KV_REST_API_URL` / `_TOKEN` | production | or `UPSTASH_REDIS_REST_*` |
 | `PORT` | no | default 8787 (Docker/Node only) |
+
+`PUBLIC_URL` and `DASHBOARD_URL` have no defaults by design. A default would
+mean a half-configured deploy tells Muse to call — and sends users to — the
+wrong site.
 
 ## License
 

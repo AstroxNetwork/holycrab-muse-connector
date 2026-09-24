@@ -6,8 +6,9 @@
  *   ConnectionStore  — who has connected, and are they still connected?
  *   ProviderPort     — what the upstream service can actually do.
  *
- * Replace `providers/placeholder.ts` with `providers/holycrab.ts` when the
- * API surface is decided. Nothing else needs to change.
+ * Replace `providers/placeholder.ts` with a real provider (e.g.
+ * `providers/your-service.ts`) when the API surface is decided. Nothing else
+ * needs to change.
  */
 
 /** One Muse user's link to HolyCrab. */

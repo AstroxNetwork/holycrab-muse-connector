@@ -3,17 +3,24 @@
   //
   // Deliberately minimal so "Deploy to Cloudflare" works for anyone who
   // clones this repo: no hardcoded resource ids, no custom domain.
+  //
+  // The name is yours to change — it only has to be unique in your account.
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "holycrab-muse-connector",
+  "name": "muse-connector",
   "main": "src/worker.ts",
   "compatibility_date": "2026-09-01",
   // tokens.ts uses node:crypto for HMAC. Without this flag the Worker will
   // fail to bundle.
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
+
+  // ── Set these to YOUR deployment ───────────────────────────────────
+  // vars are committed to the repo, so they must not be anyone's real
+  // production domain. PUBLIC_URL becomes the address Muse is told to call.
   "vars": {
-    "PUBLIC_URL": "https://muse.holycrab.ai",
-    "DASHBOARD_URL": "https://holycrab.ai"
+    "PUBLIC_URL": "https://muse.example.com",
+    "DASHBOARD_URL": "https://example.com",
+    "SERVICE_NAME": "Muse Connector"
   }
 
   // ── Persistence ────────────────────────────────────────────────────

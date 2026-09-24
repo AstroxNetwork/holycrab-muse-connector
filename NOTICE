@@ -1,4 +1,4 @@
-HolyCrab Muse Connector
+Muse Connector Template
 Copyright 2026 AstroxNetwork
 
 This product includes software developed at 1Claw AI (https://1claw.co),
@@ -13,3 +13,8 @@ The following files are derived from that work:
   src/openapi.ts    — OpenAPI / llms.txt approach
 
 They have been modified for this project.
+
+This NOTICE applies to the template itself. If you fork it and deploy your
+own connector, you are not required to reproduce this notice in your service
+or its user-facing pages — only to keep the license terms of the files you
+redistribute.

@@ -5,16 +5,6 @@ hero:
   name: Muse Connector 模板
   text: 一个下午做好你的 connector
   tagline: 可直接部署的 Meta Muse connector 模板。按连接签发的令牌、异步任务骨架，以及一份注册表同时生成路由、OpenAPI 和 llms.txt。
-  actions:
-    - theme: brand
-      text: 开始快速上手
-      link: /zh/guide/quickstart
-    - theme: alt
-      text: 你在做什么
-      link: /zh/guide/getting-started
-    - theme: alt
-      text: GitHub
-      link: https://github.com/AstroxNetwork/muse-connector-template
 
 features:
   - title: 不需要注册应用

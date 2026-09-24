@@ -5,16 +5,6 @@ hero:
   name: Muse Connector Template
   text: Build a Muse connector in an afternoon
   tagline: A deployable template for Meta Muse connectors. Per-connection tokens, async job scaffolding, and one registry that generates your routes, OpenAPI and llms.txt.
-  actions:
-    - theme: brand
-      text: Start the quickstart
-      link: /guide/quickstart
-    - theme: alt
-      text: What you're building
-      link: /guide/getting-started
-    - theme: alt
-      text: GitHub
-      link: https://github.com/AstroxNetwork/muse-connector-template
 
 features:
   - title: No app registration

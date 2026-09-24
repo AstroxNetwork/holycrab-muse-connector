@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Muse Connector 模板 — 一个下午做好你的 connector</title>
+<meta name="description" content="手把手教你用可部署模板做一个 Meta Muse connector：认证、异步任务、OpenAPI、llms.txt 与部署。">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><span class="mark"></span><a href="./">Muse Connector 模板</a></div>
+    <nav>
+      <a href="#quickstart">快速开始</a>
+      <a href="#build">改成你的</a>
+      <a href="#deploy">部署</a>
+      <a href="https://github.com/AstroxNetwork/muse-connector-template">GitHub</a>
+      <a class="lang" href="../index.html">English</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="toc">
+    <p>目录</p>
+    <a href="#what">你在做什么</a>
+    <a href="#quickstart">快速开始</a>
+    <a href="#build">改成你自己的</a>
+    <a href="#provider" class="sub">2. 实现你的服务</a>
+    <a href="#patterns">异步与付费</a>
+    <a href="#deploy">部署</a>
+    <a href="#storage">持久化</a>
+    <a href="#submit">进入目录</a>
+    <a href="#gotchas">常见坑</a>
+  </nav>
+
+  <main>
+    <h1>一个下午做好你的 Muse connector</h1>
+    <p class="lede">
+      Muse 是 Meta 的个人 AI agent，通过 <strong>connector</strong> 接入第三方服务。
+      <strong>没有应用要注册，也没有 app id 要申请</strong> ——
+      你只要暴露一个 HTTP API，让 Muse 能读取它的描述并调用。这份文档带你从空仓库走到 Muse 能用的 connector。
+    </p>
+    <div class="hero-cta">
+      <a class="primary" href="#quickstart">开始快速上手</a>
+      <a href="https://github.com/AstroxNetwork/muse-connector-template">查看源码</a>
+    </div>
+
+    <h2 id="what">你在做什么</h2>
+
+    <p>两个文件决定 Muse 能不能用你的服务：一份 OpenAPI 文档和一个
+    <code>llms.txt</code>。Muse 读这两样，然后代表用户调用你的 API。</p>
+
+    <div class="cards">
+      <div class="card">
+        <h4><code>/openapi.json</code></h4>
+        <p>给机器读：有哪些操作、要什么参数、返回什么。Muse 靠它学习你的 API。</p>
+      </div>
+      <div class="card">
+        <h4><code>/llms.txt</code></h4>
+        <p>同样内容的文字版，外加行为规则 —— 什么时候必须先问用户，慢任务怎么等。</p>
+      </div>
+      <div class="card">
+        <h4>按连接的令牌</h4>
+        <p>用户拿到的是限定范围的令牌，不是你的 API key。可撤销，模型也看不到真实凭证。</p>
+      </div>
+    </div>
+
+    <pre><code>Muse ──(connector 令牌)──▶ 你的 connector ──(你的凭证)──▶ 你的 API
+        可撤销、按连接限定      这个模板          只存在服务端</code></pre>
+
+    <div class="note">
+      <p><strong>产物就是一个普通的 OpenAPI 服务。</strong>Muse 会读它，但任何懂 OpenAPI
+      的东西都能读 —— ChatGPT、Claude、Cursor、你自己的 agent。除了
+      <code>llms.txt</code> 里的一些表述习惯，这里没有任何东西是 Muse 专属的，而那些你都可以改。</p>
+    </div>
+
+    <h2 id="quickstart">快速开始</h2>
+
+    <p>五分钟跑起来。需要 Node 20+。</p>
+
+    <ol class="steps">
+      <li>
+        <strong>克隆并安装</strong>
+        <pre><code>git clone https://github.com/AstroxNetwork/muse-connector-template.git my-connector
+cd my-connector
+npm install</code></pre>
+      </li>
+      <li>
+        <strong>设置三个变量</strong>
+        <p><code>PUBLIC_URL</code> 和 <code>DASHBOARD_URL</code>
+        <strong>故意没有默认值</strong> —— 原因见<a href="#gotchas">常见坑</a>。</p>
+        <pre><code>cp .env.example .env
+
+CONNECTOR_SECRET=$(openssl rand -base64 48)   # 32 位以上
+PUBLIC_URL=http://localhost:8787              # 本地允许 http
+DASHBOARD_URL=https://example.com             # 必须是 https
+LINK_SECRET=dev-link-secret</code></pre>
+      </li>
+      <li>
+        <strong>启动</strong>
+        <pre><code>export $(grep -v '^#' .env | xargs)
+npm run dev</code></pre>
+        <p>它会打印一条关于缺 KV 的警告。本地开发这是正常的。</p>
+      </li>
+      <li>
+        <strong>看看 Muse 会读到什么</strong>
+        <pre><code>curl -s localhost:8787/openapi.json | jq '.paths | keys'
+# [ "/v1/me", "/v1/things", "/v1/jobs", "/v1/jobs/{id}" ]
+
+curl -s localhost:8787/llms.txt</code></pre>
+        <p>这四个 operation 都是占位的。仔细读一下 <code>llms.txt</code>
+        的输出 —— 你写进 operation 的每一个字都会出现在里面。</p>
+      </li>
+      <li>
+        <strong>签发令牌并调用</strong>
+        <pre><code>TOKEN=$(curl -s -X POST localhost:8787/v1/link \
+  -H 'content-type: application/json' \
+  -H 'x-link-secret: dev-link-secret' \
+  -d '{"subject":"you@example.com"}' | jq -r .token)
+
+curl -s localhost:8787/v1/me -H "Authorization: Bearer $TOKEN" | jq</code></pre>
+      </li>
+    </ol>
+
+    <div class="good">
+      <p><strong>跑一下测试。</strong>测试本身就是规格说明，其中最重要的一条是：
+      已付费操作被重试时，不能创建第二个任务。</p>
+      <pre><code>npm test        # 50 个测试
+npm run typecheck</code></pre>
+    </div>
+
+    <h2 id="build">改成你自己的</h2>
+
+    <p>只需要改三处，其余都是管道。</p>
+
+    <h3>1. 声明你的能力</h3>
+
+    <p>打开 <code>src/operations.registry.ts</code>。删掉三个 <code>demo*</code>
+    operation，然后每个能力加一个 <code>Operation</code>。
+    这一条定义会同时生成路由、OpenAPI 路径、<code>llms.txt</code> 里的一行，以及助手的行为规则。</p>
+
+    <pre><code>{
+  id: "createVideo",              // 保持稳定；模型可能会引用它
+  method: "post",
+  path: "/v1/videos",
+  summary: "根据提示词生成视频",
+  description: "启动一次生成，返回一个需要跟踪的任务。",
+  input: { schema: z.object({ prompt: z.string().min(1).max(4000) }) },
+  spends: { kind: "credits", note: "消耗 1 个生成积分。" },
+  async: { pollWith: "getVideo", typicalSeconds: 90 },
+  handler: ({ provider, connection, body, idempotencyKey }) =>
+    provider.createVideo(connection, body as any, idempotencyKey),
+}</code></pre>
+
+    <p>其中两个字段承担了主要工作。<code>spends</code> 让描述明确告诉模型这要花钱；
+    <code>async</code> 告诉它去轮询哪个操作，而不是重复提交。两者都在<a href="#patterns">下面</a>详述。</p>
+
+    <h3 id="provider">2. 实现你的服务</h3>
+
+    <p>在 <code>src/providers/</code> 里对接你的真实 API，做完后删掉
+    <code>placeholder.ts</code>。接口一开始故意做得很小：</p>
+
+    <pre><code>export interface ProviderPort {
+  whoami(connection: ConnectionRecord): Promise&lt;WhoAmI&gt;;
+  // 上面每声明一个 operation，这里就加一个方法
+}</code></pre>
+
+    <p>抛出 <code>UpstreamError</code> 就能控制调用方看到的 HTTP 状态码 ——
+    这是 connector 其余部分唯一依赖的约定：</p>
+
+    <pre><code>throw new UpstreamError(`no such job: ${id}`, 404);</code></pre>
+
+    <h3>3. 命名</h3>
+
+    <p><code>SERVICE_NAME</code> 控制 OpenAPI 标题、<code>/health</code> 和
+    <code>llms.txt</code>。包名和仓库名随你改。</p>
+
+    <h2 id="patterns">异步与付费</h2>
+
+    <p>这是 connector 最容易出错的地方，而且几乎从来不是代码问题 —— 是措辞问题。
+    生成是异步的，而且花用户的钱。如果模型为了"查进度"重试了一次
+    <code>POST</code>，用户就会被扣两次钱。</p>
+
+    <div class="warn">
+      <p><strong>重复扣费的失败模式。</strong>慢操作 + 急切的模型 = 重复扣费。
+      有三道防线，而且三道都要有。</p>
+    </div>
+
+    <table>
+      <thead><tr><th>防线</th><th>位置</th></tr></thead>
+      <tbody>
+        <tr><td>标 <code>spends</code>，让描述写明要花钱</td><td>你的 operation</td></tr>
+        <tr><td>标 <code>async</code> + <code>pollWith</code>，让模型去轮询而不是重提</td><td>你的 operation</td></tr>
+        <tr><td>支持 <code>Idempotency-Key</code>，让重试返回同一个任务</td><td>你的 provider</td></tr>
+      </tbody>
+    </table>
+
+    <p>只声明一次，它们就会传播到两份文档里：</p>
+
+    <pre><code>spends: { kind: "credits", note: "消耗 1 个生成积分。" },
+async: { pollWith: "getVideo", typicalSeconds: 90 },</code></pre>
+
+    <p>OpenAPI 会多出 <code>x-long-running</code>、<code>x-poll-operationId</code>
+    和 <code>x-requires-confirmation</code>，生成的描述会变成：</p>
+
+    <pre><code>COSTS THE PERSON: Costs 1 generation credit. Do not call this until they
+have agreed to this specific request. This returns immediately with a job to
+track — poll `getVideo` (typically ready in about 90s). Do not resubmit to
+"check" progress; that would create a second job.</code></pre>
+
+    <p>而 <code>/llms.txt</code> 会长出一段模型每次都会读到的内容：</p>
+
+    <pre><code>## Waiting on work
+- `createVideo` returns a job; poll `getVideo` (about 90s).
+
+Polling is free and safe. **Re-submitting is not** — it starts a second job.
+A timeout is not a failure: keep polling the same job.</code></pre>
+
+    <h3>说清楚这个调用"不会"做什么</h3>
+
+    <p>描述是给正在决定要不要动手的模型读的。"读取你的余额" 不如
+    "只读。此调用无法转移资金。" 把边界写出来 ——
+    正是它阻止模型承诺你做不到的事。</p>
+
+    <h2 id="deploy">部署</h2>
+
+    <p>同一份源码，三种目标。核心代码里没有任何平台相关逻辑。</p>
+
+    <h3>Vercel</h3>
+    <pre><code>npm i -g vercel
+vercel link
+vercel env add CONNECTOR_SECRET
+vercel env add PUBLIC_URL        # https://muse.your-domain.com
+vercel env add DASHBOARD_URL     # https://your-domain.com
+vercel env add KV_REST_API_URL   # Vercel KV 或 Upstash
+vercel env add KV_REST_API_TOKEN
+vercel deploy --prod</code></pre>
+    <p><code>vercel.json</code> 会把所有路径重写到 <code>api/index.ts</code>，
+    这样对外 URL 保持在根路径。Muse 必须看到
+    <code>https://muse.your-domain.com/openapi.json</code>，而不是
+    <code>/api/openapi.json</code>。</p>
+
+    <h3>Cloudflare Workers</h3>
+    <pre><code>npm i -g wrangler
+wrangler kv namespace create MUSE_KV   # 然后取消 wrangler.jsonc 里 kv_namespaces 的注释
+wrangler secret put CONNECTOR_SECRET
+npm run deploy:cf</code></pre>
+    <p><code>wrangler.jsonc</code> 开了 <code>nodejs_compat</code>，
+    因为签名令牌用了 <code>node:crypto</code>。不开这个标志 Worker 无法打包。</p>
+
+    <h3>Docker / 任何主机</h3>
+    <pre><code>docker build -t muse-connector .
+docker run -p 8787:8787 \
+  -e CONNECTOR_SECRET=... \
+  -e PUBLIC_URL=https://muse.your-domain.com \
+  -e DASHBOARD_URL=https://your-domain.com \
+  muse-connector</code></pre>
+
+    <h2 id="storage">持久化 —— 有真实用户前必做</h2>
+
+    <div class="warn">
+      <p><strong>没有存储时，连接信息存在内存里。</strong>本地没问题，serverless 上不行：
+      每个请求可能落在新的 isolate 上，于是用户会莫名其妙被登出；更糟的是，
+      <strong>撤销授权只对某一个 isolate 生效</strong>。
+      缺少绑定时服务会打印警告，这是故意的。</p>
+    </div>
+
+    <table>
+      <thead><tr><th>存储</th><th>怎么做</th></tr></thead>
+      <tbody>
+        <tr><td>Cloudflare KV</td><td>绑定 <code>MUSE_KV</code></td></tr>
+        <tr><td>Vercel KV / Upstash</td><td>设置 <code>KV_REST_API_URL</code> + <code>KV_REST_API_TOKEN</code></td></tr>
+        <tr><td>其他任意方案</td><td>实现只有四个方法的 <code>ConnectionStore</code> 接口</td></tr>
+      </tbody>
+    </table>
+
+    <p>切换是自动的：配了 KV 就会用它。</p>
+
+    <h2 id="submit">怎么被找到</h2>
+
+    <p>这是两件不同的事，区别很重要。</p>
+
+    <table>
+      <thead><tr><th></th><th>Custom Connector</th><th>目录收录</th></tr></thead>
+      <tbody>
+        <tr><td>方式</td><td>用户把 Muse 指向你的 URL 并提供令牌</td><td>在 <code>muse.ai/platform</code> 提单</td></tr>
+        <tr><td>审核</td><td><strong>不审核</strong> —— Meta 官方明确说明</td><td>功能 + 安全 + 法务 + 端到端测试</td></tr>
+        <tr><td>分发</td><td>无；用户必须知道你的 URL</td><td>进目录，可被选入精选位</td></tr>
+        <tr><td>速度</td><td>当天可用</td><td>未知；Meta 未公布 SLA</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <p><strong>先走 Custom Connector。</strong>它不需要 Meta 做任何事，
+      所以你可以先验证 Muse 能不能理解你的异步模型，再去投入提交。
+      准备清单在
+      <a href="https://github.com/AstroxNetwork/muse-connector-template/blob/main/connector/SUBMISSION.md"><code>connector/SUBMISSION.md</code></a>。</p>
+    </div>
+
+    <p>规划之前值得知道的是：针对目录收录，Meta 至今<strong>没有公布</strong>分成比例、费用和审核时长；
+    而且 connector 条款只有在登录后才看得到。</p>
+
+    <h2 id="gotchas">常见坑</h2>
+
+    <h3>为什么 <code>PUBLIC_URL</code> 和 <code>DASHBOARD_URL</code> 是必填的？</h3>
+    <p>它们不是装饰。<code>PUBLIC_URL</code> 会写进 OpenAPI 的
+    <code>servers</code> —— 也就是 Muse 被指向去调用的地址；
+    <code>DASHBOARD_URL</code> 会打印给用户，作为撤销授权的地方。
+    有默认值就意味着：一个没配全的部署会告诉 Muse 去调用错误的地址，并把用户送到错误的站点。
+    所以 connector 选择直接拒绝启动。</p>
+
+    <h3>必须用子域名吗？</h3>
+    <p>不必。任何公网 HTTPS 地址都行 —— 子域名、主域名下的路径，或者测试时用
+    <code>*.workers.dev</code>。子域名是个好习惯，因为你的主站很可能已经占用了
+    <code>/llms.txt</code> 和 <code>/openapi.json</code>，而且它的 WAF
+    可能把 API 流量当成机器人流量处理。</p>
+
+    <h3>这需要 MCP 吗？</h3>
+    <p>不需要。Muse 的 custom connector 走的是普通 REST 加一份 OpenAPI 文档。
+    MCP 是另一套协议，也是另一个产品（命令行工具 Muse Code）。</p>
+
+    <h3>如果模型在错误的时机调用了怎么办？</h3>
+    <p>每个调用都会经过 Meta 的权限层，它可以放行、拒绝，或者询问用户。
+    你要做的是让请求可读：清晰的 <code>summary</code>、诚实的
+    <code>description</code>，以及花钱时的 <code>spends</code> 说明。</p>
+
+    <h3>不用 Muse 也能用吗？</h3>
+    <p>能。它就是一个带令牌签发端点的、经过认证的 OpenAPI 服务。把任何 agent 指向它都行。</p>
+
+    <h3>真的是 Apache-2.0 吗？</h3>
+    <p>是。随便 fork、改名、去掉品牌。你重新分发的那部分文件保留 <code>NOTICE</code>
+    就行；你部署的服务不需要标注来源。</p>
+
+  </main>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>Muse Connector 模板 — Apache-2.0。
+    <a href="https://github.com/AstroxNetwork/muse-connector-template">源码</a> ·
+    <a href="https://github.com/AstroxNetwork/muse-connector-template/blob/main/connector/SUBMISSION.md">提交套件</a> ·
+    <a href="../index.html">English</a></p>
+    <p>与 Meta 无关联。"Muse" 指 Meta 的产品。</p>
+  </div>
+</footer>
+
+<script src="../assets/app.js"></script>
+</body>
+</html>

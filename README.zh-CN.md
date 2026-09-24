@@ -5,6 +5,9 @@
 一个可直接部署的 [Meta Muse](https://muse.ai) connector 模板。Fork 它、改名、指向你自己的服务。
 Apache-2.0，没有任何附加条件。
 
+📖 **[手把手接入文档](https://astroxnetwork.github.io/muse-connector-template/zh/)** ·
+[English](https://astroxnetwork.github.io/muse-connector-template/)
+
 Muse 是 Meta 的个人 AI agent，通过 **connector** 接入第三方服务。做 connector
 **不需要注册应用、也不需要 app id** —— 你只要暴露一个 HTTP API，让 Muse 能读取它的描述并调用。
 本仓库就是那个 API，并且把最容易做错的部分都提前做好了。

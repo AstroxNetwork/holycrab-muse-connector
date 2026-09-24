@@ -5,6 +5,9 @@
 A deployable connector template for [Meta Muse](https://muse.ai). Fork it, rename
 it, point it at your own service. Apache-2.0, no strings.
 
+📖 **[Read the step-by-step guide](https://astroxnetwork.github.io/muse-connector-template/)** ·
+[中文文档](https://astroxnetwork.github.io/muse-connector-template/zh/)
+
 Muse is Meta's personal AI agent. It reaches third-party services through
 **connectors**. Building one needs no app registration and no app id — you
 expose an HTTP API that Muse can read about and call. This is that API, with the
